@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- OFF > FATAL > ERROR > WARN > INFO > DEBUG > TRACE > ALL -->
+<!-- status：log4j2自身日志的打印级别，OFF即不打印，其他则按照标准级别配置即可，如 debug -->
+<Configuration status="OFF">
+
+    <!-- 定义日志存放目录（相对路径） -->
+    <properties>
+        <property name="LOG_HOME">${web:rootDir}/../../app_logs</property>
+        <property name="ERROR_LOG_FILE_NAME">error</property>
+    </properties>
+
+    <Appenders>
+        <!-- 输出到控制台，下面分别是 debug、info、error 级别的配置 -->
+        <Console name="ConsoleDebugLog" target="SYSTEM_OUT">
+            <ThresholdFilter level="debug" onMatch="ACCEPT" onMismatch="DENY" />
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%xEx%n" />
+        </Console>
+        <Console name="ConsoleInfoLog" target="SYSTEM_OUT">
+            <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY" />
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%xEx%n" />
+        </Console>
+        <Console name="ConsoleErrorLog" target="SYSTEM_OUT">
+            <ThresholdFilter level="error" onMatch="ACCEPT" onMismatch="DENY" />
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%xEx%n" />
+        </Console>
+
+        <!-- INFO级别日志 按天输出到文件，归类到年月目录 -->
+        <RollingFile name="InfoRollingFileLog" fileName="${LOG_HOME}/API.log" filePattern="${LOG_HOME}/$${date:yyyyMM}/API-%d{yyyy-MM-dd}.log">
+            <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY" />
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%xEx%n" />
+            <SizeBasedTriggeringPolicy size="100MB"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy modulate="true" interval="1"/>
+            </Policies>
+        </RollingFile>
+
+        <!-- ERROR级别日志 按天输出到文件，归类到年月目录 -->
+        <RollingFile name="ErrorRollingFileLog" fileName="${LOG_HOME}/error.log" filePattern="${LOG_HOME}/$${date:yyyyMM}/error.log-%d{yyyy-MM-dd}.log">
+            <ThresholdFilter level="error" onMatch="ACCEPT" onMismatch="DENY" />
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%xEx%n" />
+            <SizeBasedTriggeringPolicy size="20MB"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy modulate="true" interval="1"/>
+            </Policies>
+        </RollingFile>
+
+        <!-- 错误日志存数据库 -->
+        <JDBC name="DBAppender" tableName="system_logs">
+            <ConnectionFactory class="the.daniel.common.LogConnectionFactory" method="getConnection" />
+            <Column name='"className"' pattern="%throwable{short.className}" isUnicode="false" />
+            <Column name='"methodName"' pattern="%throwable{short.methodName}" isUnicode="false" />
+            <Column name='"createTime"' isEventTimestamp="true" />
+            <Column name="message" pattern="%ex{full}" isUnicode="false" />
+            <Column name='"logLevel"' pattern="%level" isUnicode="false"/>
+            <Column name="platform" literal="'java_ssm'" />
+        </JDBC>
+    </Appenders>
+
+    <Loggers>
+        <!-- 项目整体默认日志配置，此处最低级别为 debug -->
+        <Root level="info">
+            <AppenderRef ref="ConsoleDebugLog" />
+            <AppenderRef ref="InfoRollingFileLog" />
+            <AppenderRef ref="ErrorRollingFileLog" />
+            <appender-ref ref="DBAppender" level="error"/>
+        </Root>
+    </Loggers>
+
+</Configuration>

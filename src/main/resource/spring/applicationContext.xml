@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:tx="http://www.springframework.org/schema/tx"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:mvc="http://www.springframework.org/schema/mvc"
+	   xmlns:p="http://www.springframework.org/schema/p"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd
+		http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd">
+
+	<!-- 使用spring自带的占位符替换功能 -->
+	<bean
+			class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<!-- 允许JVM参数覆盖 -->
+		<property name="systemPropertiesModeName" value="SYSTEM_PROPERTIES_MODE_OVERRIDE" />
+		<!-- 忽略没有找到的资源文件 -->
+		<property name="ignoreResourceNotFound" value="true" />
+		<!-- 配置资源文件 -->
+		<property name="locations">
+			<list>
+				<value>classpath:jdbc.properties</value>
+			</list>
+		</property>
+	</bean>
+
+	<!-- dataSource -->
+	<bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+		<!-- 基本属性 url、user、password -->
+		<property name="url" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+		<!-- 初始化连接数量 -->
+		<property name="initialSize" value="5" />
+		<!-- 最小空闲连接数 -->
+		<property name="minIdle" value="3" />
+		<!-- 最大并发连接数 -->
+		<property name="maxActive" value="100" />
+		<!-- 配置获取连接等待超时的时间 -->
+		<property name="maxWait" value="60000" />
+		<!-- 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒 -->
+		<property name="timeBetweenEvictionRunsMillis" value="60000" />
+		<!-- 配置一个连接在池中最小生存的时间，单位是毫秒 -->
+		<property name="minEvictableIdleTimeMillis" value="300000" />
+		<!-- 用来检测连接是否有效的sql，要求是一个查询语句-->
+		<property name="validationQuery" value="SELECT 'x'" />
+		<!-- 申请连接的时候检测 -->
+		<property name="testWhileIdle" value="true" />
+		<!-- 申请连接时执行validationQuery检测连接是否有效，配置为true会降低性能 -->
+		<property name="testOnBorrow" value="false" />
+		<!-- 归还连接时执行validationQuery检测连接是否有效，配置为true会降低性能  -->
+		<property name="testOnReturn" value="false" />
+		<!-- 建议怀疑存在泄漏之后再开启，到监控页面中查看ActiveConnection StackTrace属性
+		<property name="removeAbandoned" value="true" />
+		<property name="removeAbandonedTimeout" value="1800" />
+		<property name="logAbandoned" value="true" />-->
+		<!-- 打开PSCache，并且指定每个连接上PSCache的大小 -->
+		<property name="poolPreparedStatements" value="true" />
+		<property name="maxPoolPreparedStatementPerConnectionSize" value="50" />
+
+		<!-- stat配置监控统计拦截 ,config解密密码必须要配置的项 -->
+		<!--<property name="filters" value="stat,config" />-->
+		<!--<property name="connectionProperties" value="config.decrypt=true;config.decrypt.key=${jdbc-postgres.publicKey}" />-->
+	</bean>
+
+	<!-- 配置SqlSessionFactory对象 -->
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<!-- 注入数据库连接池 -->
+		<property name="dataSource" ref="dataSource"/>
+		<!-- 扫描model包 使用别名 -->
+		<property name="typeAliasesPackage" value="the.daniel.model"/>
+		<!-- 扫描sql配置文件:mapper需要的xml文件 -->
+		<property name="mapperLocations" value="classpath:mybatis/mapper/*.xml"/>
+	</bean>
+
+	<!-- 配置扫描Mapper接口包，动态实现Mapper接口，注入到spring容器中 -->
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<!-- 注入sqlSessionFactory -->
+		<property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+		<!-- 给出需要扫描Mapper接口包 -->
+		<property name="basePackage" value="the.daniel.mapper"/>
+	</bean>
+
+	<!-- 配置事务管理器 -->
+	<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<!-- 注入数据库连接池 -->
+		<property name="dataSource" ref="dataSource"/>
+	</bean>
+
+	<!-- 配置基于注解的声明式事务 -->
+	<tx:annotation-driven transaction-manager="transactionManager"/>
+</beans>
